@@ -48,9 +48,8 @@ class Ls(object):
     registration details will not be receieved.
     """
 
-    def __init__(self, client, loop=None):
+    def __init__(self, client):
         self._client = client
-        self._loop = loop or asyncio.get_event_loop()
 
         # The latest copy of the subtree of the `meta/ls/` tree which is
         # relevent to the paths being aliased. Paths for which no property
@@ -119,21 +118,21 @@ class Ls(object):
 
         for path in added:
             self._ls_tree[path] = None
-            todo.append(self._client.watch_property(
-                "meta/ls/{}".format(path), self._on_ls_tree_property_changed))
+            todo.append(asyncio.create_task(self._client.watch_property(
+                "meta/ls/{}".format(path), self._on_ls_tree_property_changed)))
 
         for path in removed:
             self._ls_tree.pop(path)
-            todo.append(self._client.unwatch_property(
-                "meta/ls/{}".format(path), self._on_ls_tree_property_changed))
+            todo.append(asyncio.create_task(self._client.unwatch_property(
+                "meta/ls/{}".format(path), self._on_ls_tree_property_changed)))
 
         # Note: The tree doesn't meaningfully change after a path is added
         # until the initial value of the property is received.
         if removed:
-            todo.append(self._on_ls_tree_changed())
+            todo.append(asyncio.create_task(self._on_ls_tree_changed()))
 
         if todo:
-            await asyncio.wait(todo, loop=self._loop)
+            await asyncio.wait(todo)
 
     async def _on_ls_tree_property_changed(self, topic, value):
         """Callback when a property in meta/ls/ changes."""
@@ -159,7 +158,7 @@ class Ls(object):
             value = get_path_listing(self._ls_tree, path)
             if value != self._last_path_value.get(path, None):
                 self._last_path_value[path] = value
-                todo.extend(cb(path, value) for cb in self._callbacks[path])
+                todo.extend(asyncio.create_task(cb(path, value)) for cb in self._callbacks[path])
 
         if todo:
-            await asyncio.wait(todo, loop=self._loop)
+            await asyncio.wait(todo)

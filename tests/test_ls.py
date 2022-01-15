@@ -12,9 +12,9 @@ from qth_ls import \
     get_path_listing
 
 
-def AsyncMock(event_loop, *args, **kwargs):
+def AsyncMock(*args, **kwargs):
     return Mock(*args,
-                side_effect=lambda *_, **__: asyncio.sleep(0, loop=event_loop),
+                side_effect=lambda *_, **__: asyncio.sleep(0),
                 **kwargs)
 
 
@@ -67,13 +67,13 @@ def test_get_path_listing():
 
 
 @pytest.mark.asyncio
-async def test_watch_and_unwatch(event_loop):
+async def test_watch_and_unwatch():
     client = Mock()
-    client.watch_property = AsyncMock(event_loop)
-    client.unwatch_property = AsyncMock(event_loop)
-    ls = Ls(client, event_loop)
+    client.watch_property = AsyncMock()
+    client.unwatch_property = AsyncMock()
+    ls = Ls(client)
 
-    foo_bar_cb = AsyncMock(event_loop)
+    foo_bar_cb = AsyncMock()
     await ls.watch_path("foo/bar", foo_bar_cb)
 
     # Should call straight away with None
@@ -92,7 +92,7 @@ async def test_watch_and_unwatch(event_loop):
 
     # Watching a different property should result in a minimal set of path
     # watches being added
-    foo_bar_baz_cb = AsyncMock(event_loop)
+    foo_bar_baz_cb = AsyncMock()
     await ls.watch_path("foo/bar/baz", foo_bar_baz_cb)
 
     foo_bar_baz_cb.assert_called_once_with("foo/bar/baz", None)
@@ -108,7 +108,7 @@ async def test_watch_and_unwatch(event_loop):
 
     # Watching a property a second time should add a callback but trigger no
     # new tree watches.
-    foo_bar_baz_cb2 = AsyncMock(event_loop)
+    foo_bar_baz_cb2 = AsyncMock()
     await ls.watch_path("foo/bar/baz", foo_bar_baz_cb2)
 
     foo_bar_baz_cb.assert_called_once_with("foo/bar/baz", None)
@@ -154,14 +154,14 @@ async def test_watch_and_unwatch(event_loop):
 
 
 @pytest.mark.asyncio
-async def test_tree_changes(event_loop):
+async def test_tree_changes():
     client = Mock()
-    client.watch_property = AsyncMock(event_loop)
-    client.unwatch_property = AsyncMock(event_loop)
-    ls = Ls(client, event_loop)
+    client.watch_property = AsyncMock()
+    client.unwatch_property = AsyncMock()
+    ls = Ls(client)
 
     # Test that values make it through
-    foo_bar_cb = AsyncMock(event_loop)
+    foo_bar_cb = AsyncMock()
     await ls.watch_path("foo/bar", foo_bar_cb)
 
     # Initially None
@@ -183,7 +183,7 @@ async def test_tree_changes(event_loop):
     foo_bar_cb.assert_called_with("foo/bar", [{"behaviour": "EVENT-1:N"}])
 
     # A second registration should immediately get the value
-    foo_bar_cb2 = AsyncMock(event_loop)
+    foo_bar_cb2 = AsyncMock()
     await ls.watch_path("foo/bar", foo_bar_cb2)
     foo_bar_cb2.assert_called_once_with(
         "foo/bar", [{"behaviour": "EVENT-1:N"}])
